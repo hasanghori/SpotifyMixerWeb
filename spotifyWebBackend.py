@@ -1,4 +1,5 @@
 import spotipy
+from spotipy import Spotify
 from spotipy.oauth2 import SpotifyOAuth
 from refreshToken import Refresh
 from SpotifySecret import client_id, client_secret, redirect_uri
@@ -34,7 +35,7 @@ class PlaylistCreation:
         return carVibeness
 
 
-    def sadBoiHours(self, songObj):
+    def sadBoiHours(self, songObj): #relax playlist
         sadBoiHoursNess = int(-(songObj.tempo * .9) - (songObj.energy * 180) - (songObj.danceability * 190)
                               - (songObj.valence * 200))
         return sadBoiHoursNess
@@ -72,7 +73,24 @@ class PlaylistCreation:
 
         return self.quickSort(songs_higher, vibe) + [pivot] + self.quickSort(songs_lower, vibe)
 
-    def mainMethod(self, playlistName, vibe, playlist_name):
+    def getPlaylistImage(self, token):
+        spotifyObject = Spotify(auth=token)
+        spotifyUser = spotifyObject.current_user()
+        username = spotifyUser['id']
+        playlistDetails = [[0 for playlists in range(3)] for items in range(3)]
+        for count in range(0, 3):
+            response = spotifyObject.user_playlists(user=username, limit=1, offset=count)
+
+            playlistID = response['items'][0]['id']
+            playlistDetails[count][0] = spotifyObject.playlist_cover_image(playlist_id=playlistID) #img
+            playlistDetails[count][1] = response['items'][0]['name'] #name
+            playlistDetails[count][2] = response['total'] #numSongs
+            print(playlistDetails[count][0])
+
+        return playlistDetails
+
+
+    def mainMethod(self, playlistName, vibe, playlist_name, token):
         scope = ' '.join([
             'user-read-email',
             'playlist-read-private',
@@ -81,15 +99,19 @@ class PlaylistCreation:
         ])
 
         #username = input("enter spotify username")
-        username = "hus920"
+        #username = "hus920"
         refreshToken = Refresh()
         tokenBearer = refreshToken.refresh()
         #spotipyObj = spotipy()
         #spotipyObj.SpotifyAuth
         #SpotifyOAuth.get_access_token()
-        token = SpotifyOAuth(client_id=client_id, client_secret=client_secret, redirect_uri=redirect_uri, scope=scope, username=username)
+        ##token = SpotifyOAuth(client_id=client_id, client_secret=client_secret, redirect_uri=redirect_uri, scope=scope, username=username)
         #token = SpotifyOAuth(scope=scope, username=username)
-        spotifyObject = spotipy.Spotify(auth_manager=token)
+        #spotifyObject = spotipy.Spotify(auth_manager=token)
+        spotifyObject = Spotify(auth=token)
+        spotifyUser = spotifyObject.current_user()
+        username = spotifyUser['id']
+
 
         #finding the playlist
         #playlistName = input("What is the playlist that you want to use?")
@@ -131,7 +153,10 @@ class PlaylistCreation:
         songsToAdd = []
         print(len(sortedSongsList))
         for songs in range(0, int(numSongs)):
-            songsToAdd.append(sortedSongsList[songs].uri)
+            try:
+                songsToAdd.append(sortedSongsList[songs].uri)
+            except:
+                break
 
         #playlist_name = input("what do you want your new playlist to be called?")
 
