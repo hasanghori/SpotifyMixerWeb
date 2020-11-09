@@ -36,7 +36,7 @@ class PlaylistCreation:
 
 
     def sadBoiHours(self, songObj): #relax playlist
-        sadBoiHoursNess = int(-(songObj.tempo * .9) - (songObj.energy * 180) - (songObj.danceability * 190)
+        sadBoiHoursNess = int(-(songObj.tempo * 1.7) - (songObj.energy * 180) - (songObj.danceability * 190)
                               - (songObj.valence * 200))
         return sadBoiHoursNess
 
@@ -49,7 +49,7 @@ class PlaylistCreation:
     def vibeDecider(self, song, vibe):
         if vibe == 1:
             return self.carVibes(song)
-        elif vibe == 2:
+        elif vibe == 3:
             return self.sadBoiHours(song)
         else:
             return self.workout(song)
@@ -79,47 +79,54 @@ class PlaylistCreation:
         username = spotifyUser['id']
         playlistDetails = [[0 for playlists in range(3)] for items in range(3)]
         for count in range(0, 3):
-            response = spotifyObject.user_playlists(user=username, limit=1, offset=count)
+            try:
+                response = spotifyObject.user_playlists(user=username, limit=1, offset=count)
 
-            playlistID = response['items'][0]['id']
-            playlistDetails[count][0] = spotifyObject.playlist_cover_image(playlist_id=playlistID) #img
-            playlistDetails[count][1] = response['items'][0]['name'] #name
-            playlistDetails[count][2] = response['total'] #numSongs
-            print(playlistDetails[count][0])
+                playlistID = response['items'][0]['id']
+                playlistDetails[count][0] = spotifyObject.playlist_cover_image(playlist_id=playlistID) #img
+                playlistDetails[count][1] = response['items'][0]['name'] #name
+                playlist = spotifyObject.user_playlist_tracks(user=username, playlist_id=playlistID)
+                playlistDetails[count][2] = playlist['total'] #numSongs
+            except:
+                break
+
 
         return playlistDetails
 
+    def loadPlaylists(self, token):
+        print("test1")
+        spotifyObject = Spotify(auth=token)
+        print("test2")
+        spotifyUser = spotifyObject.current_user()
+        username = spotifyUser['id']
+        print("test3")
+        playlistProperties = {}
+        print("test4")
+        response = spotifyObject.user_playlists(user=username, limit=1)
+        print("test5")
+        numOfPlaylists = response['total']
+        print("test6")
+        count = int(0)
+
+        while (200 > count):
+            response = spotifyObject.user_playlists(user=username, limit=1, offset=count)
+            count = count + 1
+            print(response['items'][0]['name'])
+            playlistProperties[response['items'][0]['name']] = response['items'][0]['id']
+
+        return playlistProperties
 
     def mainMethod(self, playlistName, vibe, playlist_name, token):
-        scope = ' '.join([
-            'user-read-email',
-            'playlist-read-private',
-            'playlist-modify-private',
-            'playlist-modify-public',
-        ])
-
-        #username = input("enter spotify username")
-        #username = "hus920"
-        refreshToken = Refresh()
-        tokenBearer = refreshToken.refresh()
-        #spotipyObj = spotipy()
-        #spotipyObj.SpotifyAuth
-        #SpotifyOAuth.get_access_token()
-        ##token = SpotifyOAuth(client_id=client_id, client_secret=client_secret, redirect_uri=redirect_uri, scope=scope, username=username)
-        #token = SpotifyOAuth(scope=scope, username=username)
-        #spotifyObject = spotipy.Spotify(auth_manager=token)
+        #authorization
         spotifyObject = Spotify(auth=token)
         spotifyUser = spotifyObject.current_user()
         username = spotifyUser['id']
 
 
         #finding the playlist
-        #playlistName = input("What is the playlist that you want to use?")
         response = spotifyObject.user_playlists(user=username, limit=1)
         numOfPlaylists = response['total']
-
         count = int(0)
-
         while (numOfPlaylists > count):
             if (playlistName == response['items'][0]['name']):
                 break
@@ -142,13 +149,8 @@ class PlaylistCreation:
         songObjectsList = []
         songObjectsList = self.createObjectsList(songIDList= songURIS, spotifyObject=spotifyObject)
 
-        print("what is the vibe of the sub playlist you want to create")
-        print("respond with 1 2 or 3")
-        #vibe = input("1) car playlist 2) sad moody playlist 3) workout playlist")
-
-        #sorts songs and adds them to playlist
         sortedSongsList = self.quickSort(songObjectsList, int(vibe))
-        #numSongs = input("how many songs do you want in your playlist (max is 100)")
+        
         numSongs = int(25)
         songsToAdd = []
         print(len(sortedSongsList))
@@ -157,8 +159,6 @@ class PlaylistCreation:
                 songsToAdd.append(sortedSongsList[songs].uri)
             except:
                 break
-
-        #playlist_name = input("what do you want your new playlist to be called?")
 
         spotifyObject.user_playlist_create(user=username, name=playlist_name, public=True)
         prePlaylist = spotifyObject.user_playlists(user=username)
